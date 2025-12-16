@@ -130,7 +130,7 @@
       },
       "id": "trigger-dispatch",
       "name": "Trigger SOAR Response Dispatch",
-      "type": "n8n-nodes-base.workflowTrigger",
+      "type": "n8n-nodes-base.executeWorkflow",
       "position": [1340, 300]
     }
   ],
