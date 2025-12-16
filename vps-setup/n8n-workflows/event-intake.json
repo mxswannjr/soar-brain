@@ -1,0 +1,209 @@
+{
+  "name": "SOAR Event Intake Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "soar-event",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your-header-auth-id",
+          "name": "SOAR Webhook Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "token",
+              "value": "={{ $node[\"Event Webhook\"].json.body.token }}"
+            }
+          ]
+        }
+      },
+      "id": "set-token",
+      "name": "Extract Token",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $node[\"Extract Token\"].json.token }}",
+              "operation": "equal",
+              "value2": "your-secret-token-here"
+            }
+          ]
+        }
+      },
+      "id": "validate-token",
+      "name": "Validate Token",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "lab_id": { "type": "string" },
+            "sensor": { "type": "string" },
+            "target": { "type": "string" },
+            "event_type": { "type": "string" },
+            "severity": { "type": "number", "minimum": 1, "maximum": 10 },
+            "source_ip": { "type": "string" },
+            "timestamp": { "type": "string" }
+          },
+          "required": ["lab_id", "sensor", "target", "event_type", "severity", "source_ip", "timestamp"]
+        },
+        "options": {
+          "continueOnValidationError": false
+        }
+      },
+      "id": "validate-schema",
+      "name": "Validate JSON Schema",
+      "type": "n8n-nodes-base.jsonValidate",
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "normalized_event_type",
+              "value": "={{ $node[\"Validate JSON Schema\"].json.event_type.toLowerCase() }}"
+            },
+            {
+              "name": "severity_score",
+              "value": "={{ $node[\"Validate JSON Schema\"].json.severity }}"
+            }
+          ]
+        }
+      },
+      "id": "normalize-fields",
+      "name": "Normalize Event Fields",
+      "type": "n8n-nodes-base.set",
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "document": "SOAR Event Log",
+        "dataMode": "autoMapInputData",
+        "columns": {
+          "mappings": [
+            { "from": "lab_id", "to": "Lab ID", "type": "string" },
+            { "from": "sensor", "to": "Sensor", "type": "string" },
+            { "from": "event_type", "to": "Event Type", "type": "string" },
+            { "from": "severity", "to": "Severity", "type": "number" },
+            { "from": "timestamp", "to": "Timestamp", "type": "date" }
+          ]
+        }
+      },
+      "id": "log-event",
+      "name": "Log Event",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1340, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your-sheets-cred-id",
+          "name": "SOAR Event Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": "decision-engine-workflow-id"
+      },
+      "id": "trigger-decision",
+      "name": "Trigger Decision Engine",
+      "type": "n8n-nodes-base.workflowTrigger",
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Token": {
+      "main": [
+        [
+          {
+            "node": "Validate Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Token": {
+      "main": [
+        [
+          {
+            "node": "Validate JSON Schema",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Validate JSON Schema": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Event Fields": {
+      "main": [
+        [
+          {
+            "node": "Log Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Event": {
+      "main": [
+        [
+          {
+            "node": "Trigger Decision Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null
+}
