@@ -1,0 +1,185 @@
+{
+  "name": "SOAR Response Dispatch Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "soar-dispatch-trigger",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "dispatch-trigger",
+      "name": "SOAR Dispatch Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "tags": ["soar-brain"],
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "command",
+              "value": "={{ $node[\"SOAR Dispatch Trigger\"].json.command }}"
+            },
+            {
+              "name": "response_id",
+              "value": "={{ Date.now() }}"
+            }
+          ]
+        }
+      },
+      "id": "prepare-command",
+      "name": "Prepare Command",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "={{ $node[\"Prepare Command\"].json.command }}",
+        "sshKey": "soar-ssh-key",
+        "host": "monitor-vm-ip",
+        "port": 22,
+        "username": "soar-user",
+        "options": {
+          "timeout": 30
+        }
+      },
+      "id": "execute-ssh-command",
+      "name": "Execute SSH Command",
+      "type": "n8n-nodes-base.ssh",
+      "position": [680, 300],
+      "credentials": {
+        "sshPassword": {
+          "id": "soar-ssh-cred",
+          "name": "SOAR SSH Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "execution_status",
+              "value": "={{ $node[\"Execute SSH Command\"].json.exitCode == 0 ? 'success' : 'failed' }}"
+            },
+            {
+              "name": "execution_output",
+              "value": "={{ $node[\"Execute SSH Command\"].json.stdout }}"
+            },
+            {
+              "name": "execution_error",
+              "value": "={{ $node[\"Execute SSH Command\"].json.stderr }}"
+            }
+          ]
+        }
+      },
+      "id": "capture-results",
+      "name": "Capture Execution Results",
+      "type": "n8n-nodes-base.set",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "document": "SOAR Response Log",
+        "dataMode": "autoMapInputData",
+        "columns": {
+          "mappings": [
+            { "from": "response_id", "to": "Response ID", "type": "string" },
+            { "from": "command", "to": "Command Executed", "type": "string" },
+            { "from": "execution_status", "to": "Status", "type": "string" },
+            { "from": "execution_output", "to": "Output", "type": "string" },
+            { "from": "timestamp", "to": "Timestamp", "type": "date" }
+          ]
+        }
+      },
+      "id": "log-response",
+      "name": "Log Response",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1120, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "soar-response-log",
+          "name": "SOAR Response Log"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "to": "admin@yourdomain.com",
+        "subject": "SOAR Response Executed",
+        "body": "Response ID: {{ $node[\"Prepare Command\"].json.response_id }}\nCommand: {{ $node[\"Prepare Command\"].json.command }}\nStatus: {{ $node[\"Capture Results\"].json.execution_status }}\nOutput: {{ $node[\"Capture Results\"].json.execution_output }}"
+      },
+      "id": "send-confirmation",
+      "name": "Send Confirmation Email",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1340, 300],
+      "credentials": {
+        "smtp": {
+          "id": "soar-smtp-cred",
+          "name": "SOAR SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "SOAR Dispatch Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Command": {
+      "main": [
+        [
+          {
+            "node": "Execute SSH Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute SSH Command": {
+      "main": [
+        [
+          {
+            "node": "Capture Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture Results": {
+      "main": [
+        [
+          {
+            "node": "Log Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Response": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null
+}
