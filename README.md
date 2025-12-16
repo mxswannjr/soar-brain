@@ -1,5 +1,3 @@
-# Project: Isolated Security Sandbox with External SOAR Controller (Model B)
-
 ## Purpose
 Build a fully isolated cyber range where security events are safely detonated and observed, while an external VPS (Hostinger) acts as a SOAR controller using automation workflows (n8n). The sandbox must be disposable and incapable of impacting the host workstation, LAN, or VPS.
 
@@ -206,13 +204,3 @@ This project demonstrates:
 - Safe cyber range validation
 
 **Note:** This is not a SIEM. It is a lightweight SOAR controller paired with a disposable sandbox.
-
----
-
-## Agent Instructions
-All AI agents contributing to this project must:
-- Preserve isolation boundaries at all times
-- Avoid heavy or unnecessary tooling
-- Favor explicit, auditable security controls
-- Never bypass the command allowlist
-- Treat all sandbox systems as hostile by default
