@@ -204,13 +204,3 @@ This project demonstrates:
 - Safe cyber range validation
 
 **Note:** This is not a SIEM. It is a lightweight SOAR controller paired with a disposable sandbox.
-
----
-
-## Agent Instructions
-All AI agents contributing to this project must:
-- Preserve isolation boundaries at all times
-- Avoid heavy or unnecessary tooling
-- Favor explicit, auditable security controls
-- Never bypass the command allowlist
-- Treat all sandbox systems as hostile by default
