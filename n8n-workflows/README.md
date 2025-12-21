@@ -14,7 +14,7 @@ This guide explains how to import and configure the SOAR workflows into your exi
    cp /root/rio/projects/soar-brain/n8n-workflows/*.json /root/rio/projects/n8n-docker/
    ```
 
-2. Access n8n at https://cloudrio.duckdns.org
+2. Access n8n
 
 3. Import workflows in order:
    - Go to Workflows → Import from File
